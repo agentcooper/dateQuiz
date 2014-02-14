@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>History quiz</title>
+
+    <script src="http://fb.me/react-with-addons-0.8.0.js"></script>
+    <script src="http://fb.me/JSXTransformer-0.8.0.js"></script>
+
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css">
+    
+    <script src="events.js"></script>
+
+    <style>
+      .not-answered .option a {
+        color: inherit;
+        cursor: default;
+
+        pointer-events: none;
+        text-decoration: none;
+      }
+
+      .option {
+        height: 200px;
+      }
+
+      .not-answered .option:hover {
+        background-color: #d9edf7;
+        cursor: pointer;
+      }
+
+      .not-answered .date {
+        visibility: hidden;
+      }
+
+      .result-correct,
+      .result-wrong {
+        display: none;
+      }
+
+      .correct .result-correct {
+        display: block;
+      }
+
+      .wrong .result-wrong {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      function selectRandom(from, count) {
+        var result = [];
+
+        while (result.length < count) {
+          result.push(
+            from[ Math.floor(Math.random() * from.length) ]
+          );
+        }
+
+        return result;
+      }
+
+      var Question = function() {
+        var random = selectRandom(window.list, 2);
+
+        this.left  = random[0];
+        this.right = random[1];
+      };
+
+      Question.prototype.checkAnswer = function(which) {
+        var isLeftCorrect = this.left.year < this.right.year;
+
+        var isLeft = which === 'left';
+
+        var correct = (isLeft && isLeftCorrect) || (!isLeft && !isLeftCorrect);
+
+        this.answered = true;
+        this.correct  = correct;
+
+        return correct;
+      };
+    </script>
+
+    <script type="text/jsx">
+      /** @jsx React.DOM */
+
+      var App = React.createClass({
+
+        getInitialState: function() {
+          return {
+            list: [ new Question() ],
+            index: 0
+          }
+        },
+
+        nextQuestion: function() {
+          this.state.list.push(new Question());
+          this.setState({ index: this.state.list.length - 1 });
+        },
+
+        getCurrent: function() {
+          return this.state.list[this.state.index];
+        },
+
+        answer: function(which) {
+          if (this.getCurrent().answered) {
+            return;
+          }
+
+          this.getCurrent().checkAnswer(which);
+
+          this.setState({ list: this.state.list });
+        },
+
+        move: function(direction) {
+          this.setState({ index: this.state.index + direction });
+        },
+
+        canMove: function(direction) {
+          if (direction < 0) {
+            // left
+            return this.state.index > 0;
+          } else {
+            // right
+            return this.state.index < this.state.list.length - 1;
+          }
+        },
+
+        correctAnswers: function() {
+          return this.state.list.reduce(function(correct, pair) {
+            return correct + (Boolean(pair.correct) ? 1 : 0);
+          }, 0);
+        },
+
+        total: function() {
+          return this.state.list.length;
+        },
+
+        render: function() {
+          var current = this.getCurrent();
+
+          var state = React.addons.classSet({
+            'answered':      current.answered,
+            'not-answered': !current.answered,
+
+            'wrong':   current.answered && !current.correct,
+            'correct': current.answered &&  current.correct
+          });
+
+          return (
+            <div>
+              <div className={state}>
+                <div className="row">
+
+                  <div
+                    className="option col-md-2"
+                    onClick={this.answer.bind(this, 'left')}
+                    >
+                    <div className="date"><h3>{current.left.year}</h3></div>
+                    <p dangerouslySetInnerHTML={{
+                      __html: current.left.event
+                    }}></p>
+                  </div>
+                  
+                  <div
+                    className="option col-md-2"
+                    onClick={this.answer.bind(this, 'right')}
+                    >
+                    <div className="date"><h3>{current.right.year}</h3></div>
+                    <p dangerouslySetInnerHTML={{
+                      __html: current.right.event
+                    }}></p>
+                  </div>
+
+                  <div className="col-md-2">
+                    <div className="result-correct">
+                      <div className="alert alert-success">Correct!</div>
+                    </div>
+
+                    <div className="result-wrong">
+                      <div className="alert alert-danger">Wrong :-(</div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <h4>Your score: {this.correctAnswers()} out of {this.total()}</h4>
+
+                <div className="row col-md-4">
+                <div className="btn-toolbar">
+
+                  <div className="btn-group">
+                  
+                    <button
+                      type="button"
+                      className="btn btn-default btn-lg"
+                      disabled={!this.canMove(-1)}
+                      onClick={this.move.bind(this, -1)}
+                      >
+                      <span className="glyphicon glyphicon-chevron-left"></span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-default btn-lg"
+                      disabled={!this.canMove(+1)}
+                      onClick={this.move.bind(this, +1)}
+                      >
+                      <span className="glyphicon glyphicon-chevron-right"></span>
+                    </button>
+
+                  </div>
+
+                  <button
+                    onClick={this.nextQuestion}
+                    className="next btn btn-default btn-lg pull-right"
+                    role="button">
+                    Next question
+                  </button>
+
+                </div>
+                </div>
+
+                
+
+              </div>
+
+            </div>
+          );
+        }
+      });
+
+      React.renderComponent(
+        <App list={list}/>,
+        document.getElementById('app')
+      );
+    </script>
+
+    <div class="container">
+      <base href="http://en.wikipedia.org" target="_blank">
+
+      <div class="row">
+      <h1>What event came first?</h1>
+
+      <p>Events are randomized from <a href="http://en.wikipedia.org/wiki/Timeline_of_modern_history" target="_blank">Timeline of modern history</a>.</p>
+      </div>
+
+      <div id="app"></div>
+    </div>
+  </body>
+</html>
